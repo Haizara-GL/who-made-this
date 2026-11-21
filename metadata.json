@@ -1,0 +1,6 @@
+{
+  "name": "Вестник",
+  "description": "Национальный мессенджер для чатов, звонков и совместной ловли свободных парковочных мест в реальном времени.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

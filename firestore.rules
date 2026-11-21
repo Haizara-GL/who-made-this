@@ -1,0 +1,352 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // --- ENTITY VALIDATION BLUEPRINTS ---
+
+    function isValidPrivateUser(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'handle', 'email', 'carInfo', 'city', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'displayName', 'handle', 'email', 'carInfo', 'city', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 32 &&
+             data.email is string && data.email.size() <= 120 &&
+             data.carInfo is string && data.carInfo.size() <= 80 &&
+             data.city is string && data.city.size() <= 60 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidPublicProfile(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'handle', 'carInfo', 'city', 'discoverable', 'spotsShared', 'spotsCaught', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'displayName', 'handle', 'carInfo', 'city', 'discoverable', 'spotsShared', 'spotsCaught', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 32 &&
+             data.carInfo is string && data.carInfo.size() <= 80 &&
+             data.city is string && data.city.size() <= 60 &&
+             data.discoverable is bool &&
+             data.spotsShared is int && data.spotsShared >= 0 && data.spotsShared <= 100000 &&
+             data.spotsCaught is int && data.spotsCaught >= 0 && data.spotsCaught <= 100000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidChat(data) {
+      return data.keys().hasAll(['title', 'chatType', 'creatorId', 'memberUids', 'inviteCode', 'joinable', 'lastMessageText', 'lastMessageSender', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['title', 'chatType', 'creatorId', 'memberUids', 'inviteCode', 'joinable', 'lastMessageText', 'lastMessageSender', 'createdAt', 'updatedAt']) &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+             data.chatType is string && data.chatType in ['direct', 'group', 'parking'] &&
+             data.creatorId is string && data.creatorId.size() >= 1 && data.creatorId.size() <= 128 &&
+             data.memberUids is list && data.memberUids.size() >= 1 && data.memberUids.size() <= 20 &&
+             data.memberUids[0] is string &&
+             data.inviteCode is string && data.inviteCode.size() <= 16 &&
+             data.joinable is bool &&
+             data.lastMessageText is string && data.lastMessageText.size() <= 300 &&
+             data.lastMessageSender is string && data.lastMessageSender.size() <= 60 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['chatId', 'senderId', 'senderName', 'text', 'messageType', 'spotAddress', 'spotId', 'memberUids', 'publicChannel', 'createdAt']) &&
+             data.keys().hasOnly(['chatId', 'senderId', 'senderName', 'text', 'messageType', 'spotAddress', 'spotId', 'memberUids', 'publicChannel', 'createdAt']) &&
+             data.chatId is string && data.chatId.size() >= 1 && data.chatId.size() <= 128 &&
+             data.senderId is string && data.senderId.size() >= 1 && data.senderId.size() <= 128 &&
+             data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 60 &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 1000 &&
+             data.messageType is string && data.messageType in ['text', 'parking_share', 'call_log'] &&
+             data.spotAddress is string && data.spotAddress.size() <= 160 &&
+             data.spotId is string && data.spotId.size() <= 128 &&
+             data.memberUids is list && data.memberUids.size() >= 1 && data.memberUids.size() <= 20 &&
+             data.memberUids[0] is string &&
+             data.publicChannel is bool &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidCallSession(data) {
+      return data.keys().hasAll(['callerId', 'callerName', 'calleeId', 'calleeName', 'participantUids', 'callType', 'status', 'durationSeconds', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['callerId', 'callerName', 'calleeId', 'calleeName', 'participantUids', 'callType', 'status', 'durationSeconds', 'createdAt', 'updatedAt']) &&
+             data.callerId is string && data.callerId.size() >= 1 && data.callerId.size() <= 128 &&
+             data.callerName is string && data.callerName.size() >= 1 && data.callerName.size() <= 60 &&
+             data.calleeId is string && data.calleeId.size() >= 1 && data.calleeId.size() <= 128 &&
+             data.calleeName is string && data.calleeName.size() >= 1 && data.calleeName.size() <= 60 &&
+             data.participantUids is list && data.participantUids.size() == 2 &&
+             data.participantUids[0] is string && data.participantUids[1] is string &&
+             data.callType is string && data.callType in ['audio', 'video'] &&
+             data.status is string && data.status in ['ringing', 'active', 'ended', 'declined', 'missed'] &&
+             data.durationSeconds is int && data.durationSeconds >= 0 && data.durationSeconds <= 86400 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidParkingSpot(data) {
+      return data.keys().hasAll(['posterId', 'posterName', 'posterCar', 'address', 'district', 'parkingKind', 'note', 'latitude', 'longitude', 'hasCoordinates', 'leaveInMinutes', 'status', 'publicFeed', 'claimedByUid', 'claimedByName', 'claimedByCar', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['posterId', 'posterName', 'posterCar', 'address', 'district', 'parkingKind', 'note', 'latitude', 'longitude', 'hasCoordinates', 'leaveInMinutes', 'status', 'publicFeed', 'claimedByUid', 'claimedByName', 'claimedByCar', 'createdAt', 'updatedAt']) &&
+             data.posterId is string && data.posterId.size() >= 1 && data.posterId.size() <= 128 &&
+             data.posterName is string && data.posterName.size() >= 1 && data.posterName.size() <= 60 &&
+             data.posterCar is string && data.posterCar.size() <= 80 &&
+             data.address is string && data.address.size() >= 2 && data.address.size() <= 160 &&
+             data.district is string && data.district.size() >= 1 && data.district.size() <= 60 &&
+             data.parkingKind is string && data.parkingKind in ['free', 'paid', 'yard', 'covered'] &&
+             data.note is string && data.note.size() <= 240 &&
+             data.latitude is number && data.latitude >= -90.0 && data.latitude <= 90.0 &&
+             data.longitude is number && data.longitude >= -180.0 && data.longitude <= 180.0 &&
+             data.hasCoordinates is bool &&
+             data.leaveInMinutes is int && data.leaveInMinutes >= 0 && data.leaveInMinutes <= 120 &&
+             data.status is string && data.status in ['free', 'leaving_soon', 'claimed', 'completed'] &&
+             data.publicFeed is bool &&
+             data.claimedByUid is string && data.claimedByUid.size() <= 128 &&
+             data.claimedByName is string && data.claimedByName.size() <= 60 &&
+             data.claimedByCar is string && data.claimedByCar.size() <= 80 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    // --- 1. PRIVATE USER ACCOUNT (PII ISOLATED) ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidPrivateUser(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid;
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidPrivateUser(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'handle', 'email', 'carInfo', 'city', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // --- 2. PUBLIC NON-PII MESSENGER & DRIVER PROFILES ---
+    match /public_profiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || existing().discoverable == true);
+      allow list: if isSignedIn() && existing().discoverable == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidPublicProfile(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().spotsShared == 0 &&
+                       incoming().spotsCaught == 0;
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidPublicProfile(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         // Action: Edit profile settings
+                         incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'handle', 'carInfo', 'city', 'discoverable', 'updatedAt']) ||
+                         // Action: Increment parking counters by 1
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['spotsShared', 'updatedAt']) && incoming().spotsShared == existing().spotsShared + 1) ||
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['spotsCaught', 'updatedAt']) && incoming().spotsCaught == existing().spotsCaught + 1)
+                       );
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // --- 3. CHATS & MESSAGES ---
+    match /chats/{chatId} {
+      allow get: if isSignedIn() && isValidId(chatId) && (request.auth.uid in existing().memberUids || existing().joinable == true);
+      allow list: if isSignedIn() && (request.auth.uid in existing().memberUids || existing().joinable == true);
+
+      allow create: if isSignedIn() &&
+                       isValidId(chatId) &&
+                       isValidChat(incoming()) &&
+                       incoming().creatorId == request.auth.uid &&
+                       request.auth.uid in incoming().memberUids;
+
+      allow update: if isSignedIn() &&
+                       isValidId(chatId) &&
+                       isValidChat(incoming()) &&
+                       incoming().creatorId == existing().creatorId &&
+                       incoming().chatType == existing().chatType &&
+                       incoming().inviteCode == existing().inviteCode &&
+                       incoming().createdAt == existing().createdAt && (
+                         // Action: Member updates last message preview
+                         (request.auth.uid in existing().memberUids &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSender', 'updatedAt'])) ||
+                         // Action: Creator edits chat title or joinable setting
+                         (existing().creatorId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'joinable', 'updatedAt'])) ||
+                         // Action: User joins a joinable channel
+                         (existing().joinable == true &&
+                          !(request.auth.uid in existing().memberUids) &&
+                          incoming().memberUids.hasAll(existing().memberUids) &&
+                          incoming().memberUids.size() == existing().memberUids.size() + 1 &&
+                          request.auth.uid in incoming().memberUids &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['memberUids', 'updatedAt']))
+                       );
+
+      allow delete: if isSignedIn() && isValidId(chatId) && existing().creatorId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(chatId) && isValidId(messageId) &&
+                      (request.auth.uid in existing().memberUids || existing().publicChannel == true);
+        allow list: if isSignedIn() && (request.auth.uid in existing().memberUids || existing().publicChannel == true);
+
+        allow create: if isSignedIn() &&
+                         isValidId(chatId) &&
+                         isValidId(messageId) &&
+                         isValidChatMessage(incoming()) &&
+                         incoming().chatId == chatId &&
+                         incoming().senderId == request.auth.uid &&
+                         exists(/databases/$(database)/documents/chats/$(chatId)) &&
+                         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.memberUids &&
+                         incoming().memberUids == get(/databases/$(database)/documents/chats/$(chatId)).data.memberUids &&
+                         incoming().publicChannel == get(/databases/$(database)/documents/chats/$(chatId)).data.joinable;
+
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(chatId) && isValidId(messageId) && existing().senderId == request.auth.uid;
+      }
+    }
+
+    // --- 4. VOICE & VIDEO CALLS ---
+    match /calls/{callId} {
+      allow get: if isSignedIn() && isValidId(callId) && request.auth.uid in existing().participantUids;
+      allow list: if isSignedIn() && request.auth.uid in existing().participantUids;
+
+      allow create: if isSignedIn() &&
+                       isValidId(callId) &&
+                       isValidCallSession(incoming()) &&
+                       incoming().callerId == request.auth.uid &&
+                       incoming().status == 'ringing' &&
+                       incoming().durationSeconds == 0 &&
+                       incoming().participantUids[0] == request.auth.uid &&
+                       incoming().participantUids[1] == incoming().calleeId;
+
+      allow update: if isSignedIn() &&
+                       isValidId(callId) &&
+                       isValidCallSession(incoming()) &&
+                       request.auth.uid in existing().participantUids &&
+                       !(existing().status in ['ended', 'declined', 'missed']) &&
+                       incoming().callerId == existing().callerId &&
+                       incoming().callerName == existing().callerName &&
+                       incoming().calleeId == existing().calleeId &&
+                       incoming().calleeName == existing().calleeName &&
+                       incoming().participantUids == existing().participantUids &&
+                       incoming().callType == existing().callType &&
+                       incoming().createdAt == existing().createdAt && (
+                         // Action: Callee answers ringing call
+                         (existing().status == 'ringing' &&
+                          incoming().status == 'active' &&
+                          request.auth.uid == existing().calleeId &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+                         // Action: Callee declines ringing call
+                         (existing().status == 'ringing' &&
+                          incoming().status == 'declined' &&
+                          request.auth.uid == existing().calleeId &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+                         // Action: Caller cancels unanswered call (missed)
+                         (existing().status == 'ringing' &&
+                          incoming().status == 'missed' &&
+                          request.auth.uid == existing().callerId &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+                         // Action: Either participant ends active/ringing call
+                         (existing().status in ['ringing', 'active'] &&
+                          incoming().status == 'ended' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'durationSeconds', 'updatedAt']))
+                       );
+
+      allow delete: if isSignedIn() && isValidId(callId) &&
+                       existing().callerId == request.auth.uid &&
+                       existing().status in ['ended', 'declined', 'missed'];
+    }
+
+    // --- 5. LIVE PARKING CATCHER SPOTS ---
+    match /parking_spots/{spotId} {
+      allow get: if isSignedIn() && isValidId(spotId) &&
+                    (existing().publicFeed == true || existing().posterId == request.auth.uid || existing().claimedByUid == request.auth.uid);
+      allow list: if isSignedIn() &&
+                     (existing().publicFeed == true || existing().posterId == request.auth.uid || existing().claimedByUid == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(spotId) &&
+                       isValidParkingSpot(incoming()) &&
+                       incoming().posterId == request.auth.uid &&
+                       incoming().status in ['free', 'leaving_soon'] &&
+                       incoming().publicFeed == true &&
+                       incoming().claimedByUid == '' &&
+                       incoming().claimedByName == '' &&
+                       incoming().claimedByCar == '';
+
+      allow update: if isSignedIn() &&
+                       isValidId(spotId) &&
+                       isValidParkingSpot(incoming()) &&
+                       existing().status != 'completed' &&
+                       incoming().posterId == existing().posterId &&
+                       incoming().posterName == existing().posterName &&
+                       incoming().posterCar == existing().posterCar &&
+                       incoming().address == existing().address &&
+                       incoming().district == existing().district &&
+                       incoming().parkingKind == existing().parkingKind &&
+                       incoming().latitude == existing().latitude &&
+                       incoming().longitude == existing().longitude &&
+                       incoming().hasCoordinates == existing().hasCoordinates &&
+                       incoming().publicFeed == existing().publicFeed &&
+                       incoming().createdAt == existing().createdAt && (
+                         // Action: Catch / claim an available spot
+                         (existing().status in ['free', 'leaving_soon'] &&
+                          incoming().status == 'claimed' &&
+                          incoming().claimedByUid == request.auth.uid &&
+                          incoming().claimedByName.size() >= 1 &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'claimedByUid', 'claimedByName', 'claimedByCar', 'updatedAt'])) ||
+                         // Action: Release claimed spot back to free
+                         (existing().status == 'claimed' &&
+                          (existing().posterId == request.auth.uid || existing().claimedByUid == request.auth.uid) &&
+                          incoming().status == 'free' &&
+                          incoming().claimedByUid == '' &&
+                          incoming().claimedByName == '' &&
+                          incoming().claimedByCar == '' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'claimedByUid', 'claimedByName', 'claimedByCar', 'updatedAt'])) ||
+                         // Action: Complete handover (parked)
+                         (existing().status in ['free', 'leaving_soon', 'claimed'] &&
+                          (existing().posterId == request.auth.uid || existing().claimedByUid == request.auth.uid) &&
+                          incoming().status == 'completed' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+                         // Action: Poster updates leaving time or note before claimed
+                         (existing().posterId == request.auth.uid &&
+                          existing().status in ['free', 'leaving_soon'] &&
+                          incoming().status in ['free', 'leaving_soon'] &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'leaveInMinutes', 'note', 'updatedAt']))
+                       );
+
+      allow delete: if isSignedIn() && isValidId(spotId) && existing().posterId == request.auth.uid;
+    }
+  }
+}

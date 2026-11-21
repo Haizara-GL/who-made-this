@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Вестник</string>
+    <string name="app_tagline">Национальный мессенджер • Звонки • Ловля парковки</string>
+    <string name="nav_chats">Чаты</string>
+    <string name="nav_calls">Звонки</string>
+    <string name="nav_parking">Парковка</string>
+    <string name="nav_profile">Профиль</string>
+    <string name="sign_in_google">Войти через Google</string>
+    <string name="sign_in_subtitle">Общайтесь в защищённых чатах, звоните без задержек и ловите свободные парковочные места рядом с вами в реальном времени.</string>
+    <string name="sign_out">Выйти из аккаунта</string>
+    <string name="cd_auth_hero">Иллюстрация вечернего города с сигналами связи и парковки</string>
+    <string name="cd_parking_banner">Радар свободных парковочных мест в городе</string>
+    <string name="cd_back">Назад</string>
+    <string name="cd_new_chat">Создать новый чат</string>
+    <string name="cd_send_message">Отправить сообщение</string>
+    <string name="cd_audio_call">Аудиозвонок</string>
+    <string name="cd_video_call">Видеозвонок</string>
+    <string name="cd_share_parking">Поделиться парковкой</string>
+    <string name="cd_report_spot">Сдать свободное место</string>
+    <string name="cd_locate_me">Обновить геопозицию</string>
+</resources>

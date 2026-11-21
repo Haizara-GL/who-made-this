@@ -1,0 +1,144 @@
+{
+  "entities": {
+    "PrivateUser": {
+      "title": "PrivateUser",
+      "description": "Private user account record isolating PII such as email from other users.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID matching document ID." },
+        "displayName": { "type": "string", "description": "Display name shown in profile." },
+        "handle": { "type": "string", "description": "Short unique-style messenger handle without @." },
+        "email": { "type": "string", "description": "Private Google account email address." },
+        "carInfo": { "type": "string", "description": "Driver vehicle description for parking handovers." },
+        "city": { "type": "string", "description": "User city name." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["userId", "displayName", "handle", "email", "carInfo", "city", "createdAt", "updatedAt"]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "Non-PII discoverable messenger and driver profile for starting chats, calls, and parking handovers.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID matching document ID." },
+        "displayName": { "type": "string", "description": "Public messenger display name." },
+        "handle": { "type": "string", "description": "Public messenger handle." },
+        "carInfo": { "type": "string", "description": "Vehicle color/model for recognizing driver at parking spot." },
+        "city": { "type": "string", "description": "City name." },
+        "discoverable": { "type": "boolean", "description": "Whether this profile appears in the messenger directory." },
+        "spotsShared": { "type": "integer", "description": "Total parking spots shared by the user." },
+        "spotsCaught": { "type": "integer", "description": "Total parking spots caught by the user." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["userId", "displayName", "handle", "carInfo", "city", "discoverable", "spotsShared", "spotsCaught", "createdAt", "updatedAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Direct dialog, group chat, or district parking coordination channel.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Chat or channel title." },
+        "chatType": { "type": "string", "enum": ["direct", "group", "parking"], "description": "Type of conversation." },
+        "creatorId": { "type": "string", "description": "UID of user who created the chat." },
+        "memberUids": { "type": "array", "description": "Bounded array of participant UIDs (1..20)." },
+        "inviteCode": { "type": "string", "description": "Short alphanumeric code for joining group/parking channels." },
+        "joinable": { "type": "boolean", "description": "True if signed-in users can join via invite code." },
+        "lastMessageText": { "type": "string", "description": "Preview of the most recent message." },
+        "lastMessageSender": { "type": "string", "description": "Display name of the last message sender." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["title", "chatType", "creatorId", "memberUids", "inviteCode", "joinable", "lastMessageText", "lastMessageSender", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message inside a chat, including optional shared parking spot reference.",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string", "description": "Parent chat document ID." },
+        "senderId": { "type": "string", "description": "Firebase Auth UID of the sender." },
+        "senderName": { "type": "string", "description": "Display name of the sender." },
+        "text": { "type": "string", "description": "Message body text." },
+        "messageType": { "type": "string", "enum": ["text", "parking_share", "call_log"], "description": "Message payload category." },
+        "spotAddress": { "type": "string", "description": "Optional parking address when sharing a spot." },
+        "spotId": { "type": "string", "description": "Optional linked parking_spots document ID." },
+        "memberUids": { "type": "array", "description": "Denormalized member UIDs from parent chat for flat rule evaluation." },
+        "publicChannel": { "type": "boolean", "description": "Denormalized joinable flag from parent chat." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["chatId", "senderId", "senderName", "text", "messageType", "spotAddress", "spotId", "memberUids", "publicChannel", "createdAt"]
+    },
+    "CallSession": {
+      "title": "CallSession",
+      "description": "Real-time audio/video call signaling and call history record.",
+      "type": "object",
+      "properties": {
+        "callerId": { "type": "string", "description": "UID of the user initiating the call." },
+        "callerName": { "type": "string", "description": "Display name of the caller." },
+        "calleeId": { "type": "string", "description": "UID of the recipient." },
+        "calleeName": { "type": "string", "description": "Display name of the recipient." },
+        "participantUids": { "type": "array", "description": "2-element list [callerId, calleeId]." },
+        "callType": { "type": "string", "enum": ["audio", "video"], "description": "Voice or video call." },
+        "status": { "type": "string", "enum": ["ringing", "active", "ended", "declined", "missed"], "description": "Current call lifecycle status." },
+        "durationSeconds": { "type": "integer", "description": "Call duration in seconds." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["callerId", "callerName", "calleeId", "calleeName", "participantUids", "callType", "status", "durationSeconds", "createdAt", "updatedAt"]
+    },
+    "ParkingSpot": {
+      "title": "ParkingSpot",
+      "description": "Live community parking spot available to catch or about to become free.",
+      "type": "object",
+      "properties": {
+        "posterId": { "type": "string", "description": "UID of driver reporting or releasing the spot." },
+        "posterName": { "type": "string", "description": "Display name of the driver." },
+        "posterCar": { "type": "string", "description": "Vehicle description of the leaving driver." },
+        "address": { "type": "string", "description": "Street address or landmark of the parking spot." },
+        "district": { "type": "string", "description": "City district or zone label." },
+        "parkingKind": { "type": "string", "enum": ["free", "paid", "yard", "covered"], "description": "Type of parking bay." },
+        "note": { "type": "string", "description": "Helpful tip about entry, barrier, or size." },
+        "latitude": { "type": "number", "description": "WGS84 latitude." },
+        "longitude": { "type": "number", "description": "WGS84 longitude." },
+        "hasCoordinates": { "type": "boolean", "description": "True when real GPS coordinates are attached." },
+        "leaveInMinutes": { "type": "integer", "description": "Minutes until driver vacates (0 if free right now)." },
+        "status": { "type": "string", "enum": ["free", "leaving_soon", "claimed", "completed"], "description": "Live spot availability state." },
+        "publicFeed": { "type": "boolean", "description": "Visible in the live community parking catcher feed." },
+        "claimedByUid": { "type": "string", "description": "UID of driver who caught the spot, or empty string." },
+        "claimedByName": { "type": "string", "description": "Display name of catching driver, or empty string." },
+        "claimedByCar": { "type": "string", "description": "Vehicle description of catching driver, or empty string." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["posterId", "posterName", "posterCar", "address", "district", "parkingKind", "note", "latitude", "longitude", "hasCoordinates", "leaveInMinutes", "status", "publicFeed", "claimedByUid", "claimedByName", "claimedByCar", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/PrivateUser" },
+      "description": "Owner-only private account profile isolating PII."
+    },
+    "/public_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/PublicProfile" },
+      "description": "Public non-PII directory profiles for messenger contacts and driver identification."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "Direct messages, group chats, and district parking channels."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages inside each chat conversation."
+    },
+    "/calls/{callId}": {
+      "schema": { "$ref": "#/entities/CallSession" },
+      "description": "Voice and video call signaling and call history."
+    },
+    "/parking_spots/{spotId}": {
+      "schema": { "$ref": "#/entities/ParkingSpot" },
+      "description": "Live community parking spots for catching free spaces."
+    }
+  }
+}
